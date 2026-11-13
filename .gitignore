@@ -1,0 +1,25 @@
+# Local environment and secrets
+.env
+.env.*
+!.env.example
+
+# Python
+backend/venv/
+backend/**/__pycache__/
+backend/**/*.py[cod]
+backend/.pytest_cache/
+backend/instance/
+
+# Node dependencies and generated output
+**/node_modules/
+frontend/dist/
+blockchain/artifacts/
+blockchain/cache/
+blockchain/typechain-types/
+blockchain/deployments/
+
+# Local databases and logs
+*.db
+*.sqlite
+*.sqlite3
+*.log

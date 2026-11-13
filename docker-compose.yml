@@ -1,0 +1,68 @@
+version: "3.9"
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: blocktrace-db
+    environment:
+      POSTGRES_USER: blocktrace
+      POSTGRES_PASSWORD: blocktrace_pass
+      POSTGRES_DB: blocktrace_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U blocktrace -d blocktrace_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  hardhat:
+    build:
+      context: ./blockchain
+      dockerfile: Dockerfile
+    container_name: blocktrace-hardhat
+    ports:
+      - "8545:8545"
+    volumes:
+      - ./blockchain/deployments:/app/deployments
+    command: sh -c "npx hardhat node --hostname 0.0.0.0"
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: blocktrace-backend
+    env_file:
+      - .env.example
+    environment:
+      DATABASE_URL: postgresql://blocktrace:blocktrace_pass@db:5432/blocktrace_db
+      HARDHAT_RPC_URL: http://hardhat:8545
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./blockchain/deployments:/app/deployments
+    depends_on:
+      db:
+        condition: service_healthy
+      hardhat:
+        condition: service_started
+    command: sh -c "python seed_demo.py && python run.py"
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: blocktrace-frontend
+    ports:
+      - "5173:5173"
+    environment:
+      VITE_API_BASE_URL: http://localhost:5000/api
+      VITE_RPC_URL: http://127.0.0.1:8545
+      VITE_CHAIN_ID: "31337"
+    depends_on:
+      - backend
+
+volumes:
+  pgdata:
